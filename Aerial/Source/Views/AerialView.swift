@@ -20,6 +20,8 @@ class AerialView: ScreenSaverView {
     static var previewView: AerialView?
     
     var player: AVPlayer?
+    var textView : NSTextView?
+    var timer : Timer?
     
     static var sharingPlayers: Bool {
         let preferences = Preferences.sharedInstance
@@ -64,6 +66,7 @@ class AerialView: ScreenSaverView {
     
     deinit {
         debugLog("deinit AerialView")
+        timer?.invalidate()
         NotificationCenter.default.removeObserver(self)
         
         // set player item to nil if not preview player
@@ -168,6 +171,58 @@ class AerialView: ScreenSaverView {
         ManifestLoader.instance.addCallback { videos in
             self.playNextVideo()
         }
+        
+        setupTextView()
+        setTimer()
+    }
+    
+    func setupTextView() {
+        let frame = CGRect.init(origin: CGPoint.zero, size: CGSize.init(width: self.frame.width, height: 25))
+        self.textView = NSTextView.init(frame: frame)
+        self.addSubview(textView!)
+        self.textView?.backgroundColor = NSColor.black.withAlphaComponent(0.5)
+        self.textView?.alignment = .center
+        self.textView?.textColor = NSColor.white.withAlphaComponent(0.9)
+        self.textView?.autoresizingMask = [.viewWidthSizable]
+        self.textView?.font = NSFont.labelFont(ofSize: 20)
+        self.textView?.sizeToFit()
+        self.textView?.isEditable = false
+        self.textView?.isSelectable = false
+        self.textView?.string = getRandomQuote()
+    }
+    
+    static var quotes : [String] = [
+        "To become proficient at anything we do actually need to repeat it until our brain and muscles reach a state of automation",
+        "Stop doubting yourself... be bold",
+        "if you keep doing something you like, you’ll only get better",
+        "Don’t put off until tomorrow what we can do today",
+        "Later equals never"
+    ]
+    
+    func setTimer() {
+        if #available(OSX 10.12, *) {
+            timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: { (timer) in
+                self.timerIntervalTask(timer)
+            })
+        } else {
+            // Fallback on earlier versions
+        }
+    }
+    
+    func timerIntervalTask(_ timer: Timer) {
+        self.textView?.string = getRandomQuote()
+    }
+    var lastRandomSeed : Int = -1
+    func getRandomQuote() -> String {
+        
+        var randomSeed : Int = -1
+        
+        repeat {
+            randomSeed = Int.random(0..<AerialView.quotes.count)
+        } while lastRandomSeed == randomSeed
+        lastRandomSeed = randomSeed
+        
+        return AerialView.quotes[randomSeed]
     }
     
     // MARK: - AVPlayerItem Notifications
@@ -281,5 +336,12 @@ class AerialView: ScreenSaverView {
     
         preferencesController = controller
         return controller.window
+    }
+}
+
+extension Int {
+    
+    static func random(_ range:Range<Int>) -> Int {
+        return range.lowerBound + Int(arc4random_uniform(UInt32(range.upperBound - range.lowerBound)))
     }
 }
